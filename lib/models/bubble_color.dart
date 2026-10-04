@@ -11,6 +11,7 @@ enum BubbleType {
   cyan,    // Mint Freeze / Ice Crystal
   bomb,    // Cute Dynamite / Star Bomb
   rainbow, // Magical Rainbow Candy
+  fireball,// Blazing Meteor Fireball
 }
 
 class BubbleColorData {
@@ -114,6 +115,15 @@ class BubbleColorData {
       shadowColor: Color(0xFFFF69B4),
       glowColor: Color(0xFFFFDF00),
       icon: Icons.auto_awesome_rounded,
+    ),
+    BubbleType.fireball: BubbleColorData(
+      type: BubbleType.fireball,
+      name: 'Blazing Fireball',
+      baseColor: Color(0xFFFF3D00),
+      highlightColor: Color(0xFFFF9E80),
+      shadowColor: Color(0xFFBF360C),
+      glowColor: Color(0xFFFF6E40),
+      icon: Icons.whatshot_rounded,
     ),
   };
 

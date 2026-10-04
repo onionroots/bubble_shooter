@@ -135,16 +135,17 @@ class BubbleGrid {
 
   /// Find nearest empty slot to position [pos] that connects to ceiling or an existing bubble
   GridSlot findBestSnapSlot(Vector2 pos) {
-    // Expand grid rows by 2 if needed to allow snapping below lowest bubble
-    _ensureRows(_cells.length + 2);
+    // Consider 2 virtual rows below the lowest bubble without mutating the grid
+    // (grid.set() expands rows when a bubble is actually placed).
+    final rowLimit = _cells.length + 2;
 
     GridSlot? bestSlot;
     double minDistance = double.infinity;
 
-    for (int r = 0; r < _cells.length; r++) {
+    for (int r = 0; r < rowLimit; r++) {
       final cols = getColsForRow(r);
       for (int c = 0; c < cols; c++) {
-        if (_cells[r][c] != null) continue; // slot must be empty
+        if (get(r, c) != null) continue; // slot must be empty
 
         // Must either be on the top row (r == 0) or neighbor at least one occupied bubble
         bool hasAnchor = (r == 0);
@@ -179,9 +180,13 @@ class BubbleGrid {
       return true;
     }
 
-    // Check collision with all occupied slots
+    // Check collision with occupied slots in nearby rows only
     final hitDistance = (radius + bubbleRadius) * 0.95;
-    for (int r = 0; r < _cells.length; r++) {
+    final rowF = (pos.y - topPadding - bubbleRadius) / rowHeight;
+    final reach = (hitDistance / rowHeight).ceil() + 1;
+    final rStart = max(0, rowF.floor() - reach);
+    final rEnd = min(_cells.length - 1, rowF.ceil() + reach);
+    for (int r = rStart; r <= rEnd; r++) {
       final cols = getColsForRow(r);
       for (int c = 0; c < cols; c++) {
         if (_cells[r][c] != null) {
@@ -193,6 +198,28 @@ class BubbleGrid {
       }
     }
     return false;
+  }
+
+  /// Find all occupied slots intersecting a circle at [pos] with radius [radius]
+  List<GridSlot> getOccupiedSlotsNear(Vector2 pos, double radius) {
+    final hits = <GridSlot>[];
+    final hitDistance = (radius + bubbleRadius) * 0.98;
+    final rowF = (pos.y - topPadding - bubbleRadius) / rowHeight;
+    final reach = (hitDistance / rowHeight).ceil() + 1;
+    final rStart = max(0, rowF.floor() - reach);
+    final rEnd = min(_cells.length - 1, rowF.ceil() + reach);
+    for (int r = rStart; r <= rEnd; r++) {
+      final cols = getColsForRow(r);
+      for (int c = 0; c < cols; c++) {
+        if (_cells[r][c] != null) {
+          final center = getSlotCenter(r, c);
+          if (center.distanceTo(pos) <= hitDistance) {
+            hits.add(GridSlot(r, c));
+          }
+        }
+      }
+    }
+    return hits;
   }
 
   /// BFS search for matching color cluster starting at (startRow, startCol)

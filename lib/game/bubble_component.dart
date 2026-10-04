@@ -23,6 +23,9 @@ class BubbleComponent extends PositionComponent {
   double lookOffsetX = 0.0;
   double lookOffsetY = 0.0;
 
+  // Idle "breathing" + shimmer clock (random phase per bubble)
+  double idleTime = 0.0;
+
   BubbleComponent({
     required this.type,
     required this.radius,
@@ -35,6 +38,7 @@ class BubbleComponent extends PositionComponent {
     // Stagger blink intervals so all bubbles don't blink in unison
     blinkTimer = Random().nextDouble() * 3.0;
     nextBlinkInterval = 2.5 + Random().nextDouble() * 3.5;
+    idleTime = Random().nextDouble() * pi * 2;
   }
 
   void triggerWobble() {
@@ -45,6 +49,7 @@ class BubbleComponent extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
+    idleTime += dt;
 
     if (isPopping) {
       popProgress += dt * 4.8; // pop speed
@@ -88,9 +93,10 @@ class BubbleComponent extends PositionComponent {
 
     final center = Offset(size.x / 2, size.y / 2);
 
-    // Calculate squash & stretch
-    double scaleX = 1.0;
-    double scaleY = 1.0;
+    // Calculate squash & stretch (with soft idle breathing)
+    final breathe = sin(idleTime * 2.2) * 0.018;
+    double scaleX = 1.0 + breathe;
+    double scaleY = 1.0 - breathe;
     if (wobbleIntensity > 0) {
       final wave = sin(wobbleTime) * wobbleIntensity * 0.18;
       scaleX += wave;
@@ -113,8 +119,12 @@ class BubbleComponent extends PositionComponent {
     canvas.scale(scaleX, scaleY);
 
     // 1. Colorful Outer Glow (juicy candy glow)
+    double glowStrength = 0.35;
+    if (type == BubbleType.bomb || type == BubbleType.rainbow || type == BubbleType.fireball) {
+      glowStrength = 0.55 + 0.35 * sin(idleTime * 6);
+    }
     final glowPaint = Paint()
-      ..color = colorData.glowColor.withValues(alpha: 0.35 * opacity)
+      ..color = colorData.glowColor.withValues(alpha: glowStrength * opacity)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6.0);
     canvas.drawCircle(Offset.zero, radius * 1.05, glowPaint);
 
@@ -136,29 +146,58 @@ class BubbleComponent extends PositionComponent {
       stops: const [0.0, 0.52, 1.0],
     );
 
-    final spherePaint = Paint()
-      ..shader = sphereGradient.createShader(
-        Rect.fromCircle(center: Offset.zero, radius: radius),
-      );
+    final sphereRect = Rect.fromCircle(center: Offset.zero, radius: radius);
+    final spherePaint = Paint()..shader = sphereGradient.createShader(sphereRect);
     canvas.drawCircle(Offset.zero, radius, spherePaint);
 
+    // 3b. Magical rotating rainbow swirl for the rainbow candy
+    if (type == BubbleType.rainbow) {
+      final swirl = Paint()
+        ..shader = SweepGradient(
+          transform: GradientRotation(idleTime * 2.5),
+          colors: [
+            const Color(0xFFFF2E63),
+            const Color(0xFFFF8A00),
+            const Color(0xFFFFC300),
+            const Color(0xFF10D078),
+            const Color(0xFF2292F9),
+            const Color(0xFFA259FF),
+            const Color(0xFFFF2E63),
+          ].map((c) => c.withValues(alpha: 0.85 * opacity)).toList(),
+        ).createShader(sphereRect);
+      canvas.drawCircle(Offset.zero, radius * 0.97, swirl);
+    }
+
+    // 3c. Crisp candy outline for readability against the background
+    final outlinePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1.2, radius * 0.06)
+      ..color = Color.lerp(colorData.shadowColor, Colors.black, 0.35)!
+          .withValues(alpha: 0.75 * opacity);
+    canvas.drawCircle(Offset.zero, radius * 0.97, outlinePaint);
+
     // 4. Glossy Specular Shine (big juicy cartoon glass reflection)
-    final shineCenter = Offset(-radius * 0.34, -radius * 0.36);
+    final shineCenter = Offset(-radius * 0.32, -radius * 0.4);
+    final shineRect = Rect.fromCenter(
+      center: Offset.zero,
+      width: radius * 0.62,
+      height: radius * 0.34,
+    );
     final shinePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.85 * opacity)
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.white.withValues(alpha: 0.95 * opacity),
+          Colors.white.withValues(alpha: 0.15 * opacity),
+        ],
+      ).createShader(shineRect)
       ..style = PaintingStyle.fill;
 
     canvas.save();
     canvas.translate(shineCenter.dx, shineCenter.dy);
-    canvas.rotate(-pi / 5.5);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: radius * 0.48,
-        height: radius * 0.28,
-      ),
-      shinePaint,
-    );
+    canvas.rotate(-pi / 6);
+    canvas.drawOval(shineRect, shinePaint);
     canvas.restore();
 
     // Secondary tiny sparkle glint

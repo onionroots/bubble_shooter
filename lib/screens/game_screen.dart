@@ -33,6 +33,9 @@ class _GameScreenState extends State<GameScreen> {
   BubbleType currentBubble = BubbleType.red;
   BubbleType nextBubble = BubbleType.blue;
 
+  bool isFeverMode = false;
+  double feverProgress = 0.0;
+
   int earnedStars = 0;
   String failReason = 'Out of shots!';
 
@@ -40,6 +43,66 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
     currentLevelNumber = widget.initialLevel;
+
+    ProgressService.instance.onAchievementUnlocked = (title, desc) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF1E1B4B),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFFFD700), width: 1.5),
+          ),
+          content: Row(
+            children: [
+              const Text('🏆', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Color(0xFFFFD700),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      desc,
+                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBBF24),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'BADGE! 🎖️',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    };
+
     _startLevel(currentLevelNumber);
   }
 
@@ -50,23 +113,45 @@ class _GameScreenState extends State<GameScreen> {
     shotsLeft = levelData.maxShots;
     combo = 0;
     earnedStars = 0;
+    isFeverMode = false;
+    feverProgress = 0.0;
 
     game = BubbleShooterGame(
       levelData: levelData,
       onScoreChanged: (s) {
-        if (mounted) setState(() => score = s);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => score = s);
+        });
       },
       onShotsChanged: (sh) {
-        if (mounted) setState(() => shotsLeft = sh);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => shotsLeft = sh);
+        });
       },
       onComboChanged: (c) {
-        if (mounted) setState(() => combo = c);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => combo = c);
+        });
       },
       onCurrentBubbleChanged: (b) {
-        if (mounted) setState(() => currentBubble = b);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => currentBubble = b);
+        });
       },
       onNextBubbleChanged: (b) {
-        if (mounted) setState(() => nextBubble = b);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => nextBubble = b);
+        });
+      },
+      onFeverChanged: (active, prog) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              isFeverMode = active;
+              feverProgress = prog;
+            });
+          }
+        });
       },
       onLevelComplete: (stars, finalScore) async {
         earnedStars = stars;
@@ -75,15 +160,19 @@ class _GameScreenState extends State<GameScreen> {
           finalScore,
           stars,
         );
-        if (mounted) {
-          game.overlays.add('complete');
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            game.overlays.add('complete');
+          }
+        });
       },
       onLevelFailed: (reason) {
         failReason = reason;
-        if (mounted) {
-          game.overlays.add('failed');
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            game.overlays.add('failed');
+          }
+        });
       },
     );
   }
@@ -129,6 +218,8 @@ class _GameScreenState extends State<GameScreen> {
                     combo: combo,
                     currentBubble: currentBubble,
                     nextBubble: nextBubble,
+                    isFeverMode: isFeverMode,
+                    feverProgress: feverProgress,
                     onPause: () {
                       g.overlays.add('pause');
                       g.pauseEngine();
@@ -145,6 +236,12 @@ class _GameScreenState extends State<GameScreen> {
                     onUseRainbow: () {
                       if (ProgressService.instance.useRainbowBooster()) {
                         g.equipBooster(BubbleType.rainbow);
+                        setState(() {});
+                      }
+                    },
+                    onUseFireball: () {
+                      if (ProgressService.instance.useFireballBooster()) {
+                        g.equipBooster(BubbleType.fireball);
                         setState(() {});
                       }
                     },

@@ -387,6 +387,31 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+
+                  // Trophy Badges Button
+                  OutlinedButton.icon(
+                    onPressed: () => _showAchievementsDialog(context),
+                    icon: const Text('🏆', style: TextStyle(fontSize: 18)),
+                    label: const Text(
+                      'TROPHY BADGES',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      side: const BorderSide(color: Color(0xFFA855F7), width: 1.5),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+
                   const Spacer(flex: 2),
 
                   // Bottom Total Score Ribbon
@@ -518,6 +543,107 @@ class _MainMenuScreenState extends State<MainMenuScreen>
           ),
         ),
       ),
+    );
+  }
+
+  void _showAchievementsDialog(BuildContext context) {
+    final progress = ProgressService.instance;
+    final achievements = [
+      {'id': 'first_win', 'title': 'Level Cleared!', 'desc': 'Completed a level successfully', 'icon': '🏆'},
+      {'id': 'three_stars', 'title': 'Perfectionist!', 'desc': 'Earned 3 stars on a level', 'icon': '⭐'},
+      {'id': 'combo_master', 'title': 'Combo Master!', 'desc': 'Reached a 4X combo streak', 'icon': '🔥'},
+      {'id': 'fever_mode', 'title': 'Fever Frenzy!', 'desc': 'Activated 2X Fever Mode', 'icon': '⚡'},
+      {'id': 'first_booster', 'title': 'Power Player!', 'desc': 'Used your first booster', 'icon': '💣'},
+      {'id': 'firestarter', 'title': 'Firestarter!', 'desc': 'Launched a scorching fireball', 'icon': '☄️'},
+      {'id': 'sharpshooter', 'title': 'Sharpshooter!', 'desc': 'Finished with 5+ shots left', 'icon': '🎯'},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1035),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                '🏆 TROPHY BADGES',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: achievements.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final item = achievements[i];
+                    final isUnlocked = progress.unlockedAchievements.contains(item['id']);
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isUnlocked ? const Color(0xFF2E1065) : Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isUnlocked ? const Color(0xFFFFD700) : Colors.white12,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(item['icon']!, style: const TextStyle(fontSize: 24)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item['title']!,
+                                  style: TextStyle(
+                                    color: isUnlocked ? const Color(0xFFFFD700) : Colors.white60,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  item['desc']!,
+                                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            isUnlocked ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
+                            color: isUnlocked ? const Color(0xFF10B981) : Colors.white24,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
